@@ -1,3 +1,5 @@
+const { ProxyAgent, fetch: undiciFetch } = require("undici");
+
 const PROXIES = [
   "38.154.203.95:5863:hanflorw:b6wywpi2qksy",
   "198.105.121.200:6462:hanflorw:b6wywpi2qksy",
@@ -15,18 +17,16 @@ function getRandomProxy() {
   return PROXIES[Math.floor(Math.random() * PROXIES.length)];
 }
 
-function parseProxy(proxyStr) {
-  const [host, port, username, password] = proxyStr.split(":");
-  return { host, port, username, password };
-}
-
 async function getFollowerCount(username) {
   const proxyStr = getRandomProxy();
-  const proxy = parseProxy(proxyStr);
+  const [host, port, user, pass] = proxyStr.split(":");
+  const proxyUrl = `http://${user}:${pass}@${host}:${port}`;
+  const dispatcher = new ProxyAgent(proxyUrl);
 
   try {
     const url = `https://www.instagram.com/${username}/`;
-    const res = await fetch(url, {
+    const res = await undiciFetch(url, {
+      dispatcher,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
