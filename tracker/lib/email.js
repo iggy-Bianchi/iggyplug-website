@@ -114,7 +114,7 @@ async function sendReport(date, results, previousResults) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.REPORT_EMAIL_FROM || "IggyPlug <reports@iggyplug.com>",
+      from: process.env.REPORT_EMAIL_FROM || "onboarding@resend.dev",
       to: process.env.REPORT_EMAIL_TO,
       subject: `IggyPlug Daily Report -- ${date}`,
       html,
