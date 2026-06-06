@@ -1,23 +1,38 @@
-/**
- * Scrapes the public follower count for an Instagram username.
- * Uses Instagram's public page HTML -- no API key needed for public accounts.
- */
+const PROXIES = [
+  "38.154.203.95:5863:hanflorw:b6wywpi2qksy",
+  "198.105.121.200:6462:hanflorw:b6wywpi2qksy",
+  "64.137.96.74:6641:hanflorw:b6wywpi2qksy",
+  "209.127.138.10:5784:hanflorw:b6wywpi2qksy",
+  "38.154.185.97:6370:hanflorw:b6wywpi2qksy",
+  "84.247.60.125:6095:hanflorw:b6wywpi2qksy",
+  "142.111.67.146:5611:hanflorw:b6wywpi2qksy",
+  "191.96.254.138:6185:hanflorw:b6wywpi2qksy",
+  "31.58.9.4:6077:hanflorw:b6wywpi2qksy",
+  "104.239.107.47:5699:hanflorw:b6wywpi2qksy",
+];
+
+function getRandomProxy() {
+  return PROXIES[Math.floor(Math.random() * PROXIES.length)];
+}
+
+function parseProxy(proxyStr) {
+  const [host, port, username, password] = proxyStr.split(":");
+  return { host, port, username, password };
+}
+
 async function getFollowerCount(username) {
+  const proxyStr = getRandomProxy();
+  const proxy = parseProxy(proxyStr);
+
   try {
     const url = `https://www.instagram.com/${username}/`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
         Connection: "keep-alive",
         "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
         "Cache-Control": "max-age=0",
       },
     });
@@ -27,8 +42,6 @@ async function getFollowerCount(username) {
     }
 
     const html = await res.text();
-
-    // Try multiple patterns Instagram has used over time
     const patterns = [
       /"edge_followed_by":\{"count":(\d+)\}/,
       /"followers":\{"count":(\d+)\}/,
@@ -51,16 +64,12 @@ async function getFollowerCount(username) {
   }
 }
 
-/**
- * Scrape all clients with a small delay between requests to avoid rate limiting.
- */
 async function scrapeAll(clients) {
   const results = [];
   for (const username of clients) {
     const result = await getFollowerCount(username);
     results.push(result);
-    // Small delay between requests
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 3000));
   }
   return results;
 }
