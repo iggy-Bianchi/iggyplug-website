@@ -1,77 +1,76 @@
-const { ProxyAgent, fetch: undiciFetch } = require("undici");
+/**
+ * Scrapes Instagram follower counts via Apify Instagram Scraper actor.
+ * Actor: apify/instagram-scraper
+ * Cost: ~$2.70 per 1,000 results -- 34 accounts/day is basically free.
+ */
 
-const PROXIES = [
-  "38.154.203.95:5863:hanflorw:b6wywpi2qksy",
-  "198.105.121.200:6462:hanflorw:b6wywpi2qksy",
-  "64.137.96.74:6641:hanflorw:b6wywpi2qksy",
-  "209.127.138.10:5784:hanflorw:b6wywpi2qksy",
-  "38.154.185.97:6370:hanflorw:b6wywpi2qksy",
-  "84.247.60.125:6095:hanflorw:b6wywpi2qksy",
-  "142.111.67.146:5611:hanflorw:b6wywpi2qksy",
-  "191.96.254.138:6185:hanflorw:b6wywpi2qksy",
-  "31.58.9.4:6077:hanflorw:b6wywpi2qksy",
-  "104.239.107.47:5699:hanflorw:b6wywpi2qksy",
-];
-
-function getRandomProxy() {
-  return PROXIES[Math.floor(Math.random() * PROXIES.length)];
-}
-
-async function getFollowerCount(username) {
-  const proxyStr = getRandomProxy();
-  const [host, port, user, pass] = proxyStr.split(":");
-  const proxyUrl = `http://${user}:${pass}@${host}:${port}`;
-  const dispatcher = new ProxyAgent(proxyUrl);
-
-  try {
-    const url = `https://www.instagram.com/${username}/`;
-    const res = await undiciFetch(url, {
-      dispatcher,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        Connection: "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-        "Cache-Control": "max-age=0",
-      },
-    });
-
-    if (!res.ok) {
-      return { username, count: null, error: `HTTP ${res.status}` };
-    }
-
-    const html = await res.text();
-    const patterns = [
-      /"edge_followed_by":\{"count":(\d+)\}/,
-      /"followers":\{"count":(\d+)\}/,
-      /,"followers_count":(\d+),/,
-      /"follower_count":(\d+)/,
-      /content="([\d,]+) Followers/,
-    ];
-
-    for (const pattern of patterns) {
-      const match = html.match(pattern);
-      if (match) {
-        const count = parseInt(match[1].replace(/,/g, ""), 10);
-        return { username, count, error: null };
-      }
-    }
-
-    return { username, count: null, error: "Pattern not found" };
-  } catch (err) {
-    return { username, count: null, error: err.message };
-  }
-}
+const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
+const ACTOR_ID = "apify~instagram-scraper";
 
 async function scrapeAll(clients) {
-  const results = [];
-  for (const username of clients) {
-    const result = await getFollowerCount(username);
-    results.push(result);
-    await new Promise((r) => setTimeout(r, 3000));
+  // Build profile URLs for all clients
+  const urls = clients.map((u) => `https://www.instagram.com/${u}/`);
+
+  // Start the Apify actor run
+  const runRes = await fetch(
+    `https://api.apify.com/v2/acts/${ACTOR_ID}/runs?token=${APIFY_TOKEN}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        directUrls: urls,
+        resultsType: "details",
+        resultsLimit: 1,
+      }),
+    }
+  );
+
+  if (!runRes.ok) {
+    throw new Error(`Apify run failed: ${await runRes.text()}`);
   }
-  return results;
+
+  const { data: run } = await runRes.json();
+  const runId = run.id;
+
+  // Poll until the run finishes (max 5 minutes)
+  let status = run.status;
+  let attempts = 0;
+  while (status !== "SUCCEEDED" && status !== "FAILED" && attempts < 60) {
+    await new Promise((r) => setTimeout(r, 5000));
+    const statusRes = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`
+    );
+    const { data } = await statusRes.json();
+    status = data.status;
+    attempts++;
+  }
+
+  if (status !== "SUCCEEDED") {
+    throw new Error(`Apify run did not succeed. Status: ${status}`);
+  }
+
+  // Fetch results from the dataset
+  const datasetRes = await fetch(
+    `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}`
+  );
+  const items = await datasetRes.json();
+
+  // Map results back to our format
+  const resultMap = {};
+  for (const item of items) {
+    if (item.username) {
+      resultMap[item.username.toLowerCase()] = item.followersCount ?? null;
+    }
+  }
+
+  return clients.map((username) => {
+    const count = resultMap[username.toLowerCase()] ?? null;
+    return {
+      username,
+      count,
+      error: count === null ? "Not found in results" : null,
+    };
+  });
 }
 
-module.exports = { getFollowerCount, scrapeAll };
+module.exports = { scrapeAll };
