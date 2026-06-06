@@ -1,0 +1,9 @@
+{
+  "name": "iggyplug-tracker",
+  "version": "1.0.0",
+  "description": "Daily Instagram follower tracker for IggyPlug clients",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
