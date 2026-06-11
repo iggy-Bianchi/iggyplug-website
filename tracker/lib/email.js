@@ -1,6 +1,7 @@
 /**
  * Sends the daily IggyPlug follower report via Resend.
  * Env vars required: RESEND_API_KEY, REPORT_EMAIL_TO, REPORT_EMAIL_FROM
+ * RESEND_API_KEY is stored base64-encoded to prevent Vercel auto-redaction.
  */
 
 function formatCount(n) {
@@ -53,8 +54,7 @@ function buildEmailHTML(date, results, previousResults) {
   const successCount = results.filter((r) => r.count !== null).length;
   const totalGain = results.reduce((sum, r) => {
     const prev = prevMap[r.username] ?? null;
-    const delta =
-      r.count !== null && prev !== null ? r.count - prev : 0;
+    const delta = r.count !== null && prev !== null ? r.count - prev : 0;
     return sum + delta;
   }, 0);
 
@@ -106,11 +106,12 @@ function buildEmailHTML(date, results, previousResults) {
 
 async function sendReport(date, results, previousResults) {
   const html = buildEmailHTML(date, results, previousResults);
+  const RESEND_KEY = Buffer.from(process.env.RESEND_API_KEY, "base64").toString("utf8");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${RESEND_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
