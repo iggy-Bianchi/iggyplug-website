@@ -16,8 +16,8 @@ const { CLIENTS, TYLER_EMAIL, BRADLEY_EMAIL } = require("../lib/clients");
 const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const CRON_SECRET = process.env.CRON_SECRET;
-const RESEND_KEY  = "re_LFfhZD5i_CzLkrTigNTVLBPkJGMqxTK9n";
-const FROM_EMAIL  = "IggyPlug <onboarding@resend.dev>";
+const RESEND_KEY  = process.env.IGGYPLUG_RESEND_KEY;
+const FROM_EMAIL  = "IggyPlug <iggy@iggyplug.com>";
 
 function getTodayStr() {
   return new Date().toISOString().slice(0, 10);
