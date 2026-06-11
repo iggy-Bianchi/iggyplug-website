@@ -3,12 +3,18 @@
     {
       "path": "/api/cron",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/weekly-report",
+      "schedule": "0 14 * * 1"
     }
   ],
   "functions": {
     "api/cron.js": {
       "maxDuration": 300
+    },
+    "api/weekly-report.js": {
+      "maxDuration": 60
     }
   }
 }
-
