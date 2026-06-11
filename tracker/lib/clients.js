@@ -8,7 +8,7 @@
  */
 
 const BRADLEY_EMAIL = "iggy@iggyplug.com";
-const TYLER_EMAIL   = "tyler@artistformula.com";
+const TYLER_EMAIL   = "iggy@iggyplug.com";
 
 const CLIENTS = [
   { handle: "lostsaintsmusic",     clientName: "Lost Saints Music"    },
