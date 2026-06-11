@@ -15,7 +15,7 @@ const { CLIENTS, TYLER_EMAIL, BRADLEY_EMAIL } = require("../lib/clients");
 
 const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-const RESEND_KEY  = process.env.RESEND_API_KEY;
+const RESEND_KEY  = process.env.EMAIL_SERVICE_TOKEN;
 const CRON_SECRET = process.env.CRON_SECRET;
 const FROM_EMAIL  = "IggyPlug <onboarding@resend.dev>";
 
