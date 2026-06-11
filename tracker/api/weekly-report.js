@@ -33,10 +33,14 @@ function getPastDates(n) {
   return dates;
 }
 
-async function redisGet(key) {
-  const res = await fetch(`${REDIS_URL}/get/${encodeURIComponent(key)}`, {
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
-  });
+// Key format matches cron.js: iggyplug:counts:YYYY-MM-DD
+// Each snapshot is an array of { username, count, error }
+async function redisGet(date) {
+  const key = `iggyplug:counts:${date}`;
+  const res = await fetch(
+    `${REDIS_URL}/${["GET", key].map(encodeURIComponent).join("/")}`,
+    { headers: { Authorization: `Bearer ${REDIS_TOKEN}` } }
+  );
   const json = await res.json();
   if (!json.result) return null;
   try { return JSON.parse(json.result); } catch { return null; }
@@ -153,20 +157,30 @@ module.exports = async function handler(req, res) {
   const dates = getPastDates(7);
   const results = { sent: [], skipped: [], errors: [] };
 
+  // Pre-fetch all 7 snapshots once to avoid redundant Redis calls
+  const snapshots = {};
+  for (const date of dates) {
+    snapshots[date] = await redisGet(date);
+  }
+
   for (const client of CLIENTS) {
-    const { handle, clientName, clientEmail } = client;
+    const { handle, clientName } = client;
 
     const rows = [];
+    let prevCount = null;
+
     for (const date of dates) {
-      const snap = await redisGet(`snapshot:${date}`);
+      const snap = snapshots[date];
       if (!snap) continue;
-      const account = snap.find(r => r.username === handle || r.handle === handle);
-      if (!account) continue;
-      rows.push({
-        date,
-        followers: account.followers || account.followersCount || 0,
-        change: account.change || account.followersCountDelta || 0,
-      });
+      // cron.js saves { username, count, error }
+      const account = snap.find(r => r.username === handle);
+      if (!account || account.error) continue;
+
+      const followers = account.count || 0;
+      const change = prevCount !== null ? followers - prevCount : 0;
+      prevCount = followers;
+
+      rows.push({ date, followers, change });
     }
 
     if (!rows.length) {
