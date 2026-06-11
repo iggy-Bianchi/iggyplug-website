@@ -73,4 +73,5 @@ async function scrapeAll(clients) {
   });
 }
 
+
 module.exports = { scrapeAll };
