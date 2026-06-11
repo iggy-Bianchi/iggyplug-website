@@ -138,10 +138,11 @@ function buildEmail(clientName, handle, rows) {
 }
 
 async function sendEmail(to, cc, subject, html) {
+  const RESEND_KEY_DECODED = Buffer.from(RESEND_KEY, "base64").toString("utf8");
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${RESEND_KEY}`,
+      Authorization: `Bearer ${RESEND_KEY_DECODED}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ from: FROM_EMAIL, to, cc, subject, html }),
