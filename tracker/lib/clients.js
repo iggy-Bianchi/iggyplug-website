@@ -29,7 +29,7 @@ const CLIENTS = [
   { handle: "devongilfillian",     clientName: "Devon Gilfillian"     },
   { handle: "tylerlorettee",       clientName: "Tyler Lorettee"       },
   { handle: "theelliotposton",     clientName: "Elliot Poston"        },
-  { handle: "shaneweisman",        clientName: "Shane Weisman"        },
+  { handle: "michellemalonemusic",        clientName: "Michelle Malone"        },
   { handle: "bandsolstice",        clientName: "Solstice"             },
   { handle: "hickory_music",       clientName: "Hickory Music"        },
   { handle: "joey.myron",          clientName: "Joey Myron"           },
