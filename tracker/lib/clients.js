@@ -44,6 +44,7 @@ const CLIENTS = [
   { handle: "thedirtyguvnahs",     clientName: "The Dirty Guv'nahs"   },
   { handle: "peterkeys",           clientName: "Peter Keys"           },
   { handle: "tylerbooner",         clientName: "Tyler Booner"         },
+  { handle: "tarabeier",         clientName: "Tara Beier"         },
 ];
 
 module.exports = { CLIENTS, TYLER_EMAIL, BRADLEY_EMAIL };
