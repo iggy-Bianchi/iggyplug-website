@@ -106,7 +106,7 @@ function buildEmailHTML(date, results, previousResults) {
 
 async function sendReport(date, results, previousResults) {
   const html = buildEmailHTML(date, results, previousResults);
-  const RESEND_KEY = "re_LFfhZD5i_CzLkrTigNTVLBPkJGMqxTK9n";
+  const RESEND_KEY = Buffer.from(process.env.EMAIL_SERVICE_TOKEN, "base64").toString("utf8");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
