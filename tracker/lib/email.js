@@ -1,12 +1,10 @@
 /**
  * Sends the daily IggyPlug follower report via Resend.
- * Env vars required: REPORT_EMAIL_TO, REPORT_EMAIL_FROM, and a Resend key in
- * EITHER EMAIL_SERVICE_TOKEN (base64-encoded) OR RESEND_API_KEY (plain).
+ * Env vars required: REPORT_EMAIL_TO, REPORT_EMAIL_FROM (optional), and a
+ * Resend key in IGGYPLUG_RESEND_KEY (the same one the weekly report uses).
  *
- * The key was stored base64-encoded as EMAIL_SERVICE_TOKEN to dodge Vercel's
- * auto-redaction of re_-prefixed secrets. getResendKey() below resolves the
- * key from whichever variable is actually set, so the daily report uses the
- * same working key as the weekly one.
+ * getResendKey() below resolves the key whether it is stored plain (re_...)
+ * or base64-encoded, and falls back to a couple of older variable names.
  */
 
 function looksLikeKey(k) {
@@ -17,26 +15,37 @@ function looksLikeKey(k) {
 // style. Throws a clear, actionable error instead of the cryptic
 // "first argument must be of type string ... Received undefined".
 function getResendKey() {
-  const encoded = process.env.EMAIL_SERVICE_TOKEN;
-  const plain = process.env.RESEND_API_KEY;
+  // Checked in order. IGGYPLUG_RESEND_KEY is the live key the weekly report
+  // already uses; the others are kept as fallbacks. Each candidate is handled
+  // whether it is stored plain (re_...) or base64-encoded.
+  const candidates = [
+    process.env.IGGYPLUG_RESEND_KEY,
+    process.env.EMAIL_SERVICE_TOKEN,
+    process.env.RESEND_API_KEY,
+  ];
 
-  // Prefer a value that actually looks like a Resend key (starts with "re_").
-  if (encoded && encoded.trim()) {
-    const decoded = Buffer.from(encoded.trim(), "base64").toString("utf8").trim();
-    if (looksLikeKey(decoded)) return decoded;
+  // First pass: return anything that clearly resolves to a Resend key.
+  for (const raw of candidates) {
+    if (!raw || !raw.trim()) continue;
+    const v = raw.trim();
+    if (looksLikeKey(v)) return v;
+    try {
+      const decoded = Buffer.from(v, "base64").toString("utf8").trim();
+      if (looksLikeKey(decoded)) return decoded;
+    } catch (_) {
+      /* not valid base64, ignore */
+    }
   }
-  if (looksLikeKey(plain)) return plain.trim();
 
-  // Last resort: return any non-empty value we have, in case the prefix
-  // check is ever too strict.
-  if (encoded && encoded.trim()) {
-    return Buffer.from(encoded.trim(), "base64").toString("utf8").trim();
+  // Second pass: take the first non-empty value as-is, in case the "re_"
+  // prefix check is ever too strict.
+  for (const raw of candidates) {
+    if (raw && raw.trim()) return raw.trim();
   }
-  if (plain && plain.trim()) return plain.trim();
 
   throw new Error(
-    "No Resend API key found. Set EMAIL_SERVICE_TOKEN (base64-encoded) or " +
-      "RESEND_API_KEY (plain) for the Production environment in Vercel."
+    "No Resend API key found. Set IGGYPLUG_RESEND_KEY (the key the weekly " +
+      "report uses) for the Production environment in Vercel."
   );
 }
 
