@@ -1,8 +1,44 @@
 /**
  * Sends the daily IggyPlug follower report via Resend.
- * Env vars required: RESEND_API_KEY, REPORT_EMAIL_TO, REPORT_EMAIL_FROM
- * RESEND_API_KEY is stored base64-encoded to prevent Vercel auto-redaction.
+ * Env vars required: REPORT_EMAIL_TO, REPORT_EMAIL_FROM, and a Resend key in
+ * EITHER EMAIL_SERVICE_TOKEN (base64-encoded) OR RESEND_API_KEY (plain).
+ *
+ * The key was stored base64-encoded as EMAIL_SERVICE_TOKEN to dodge Vercel's
+ * auto-redaction of re_-prefixed secrets. getResendKey() below resolves the
+ * key from whichever variable is actually set, so the daily report uses the
+ * same working key as the weekly one.
  */
+
+function looksLikeKey(k) {
+  return typeof k === "string" && k.trim().startsWith("re_");
+}
+
+// Resolve the Resend API key from the environment, tolerant of either storage
+// style. Throws a clear, actionable error instead of the cryptic
+// "first argument must be of type string ... Received undefined".
+function getResendKey() {
+  const encoded = process.env.EMAIL_SERVICE_TOKEN;
+  const plain = process.env.RESEND_API_KEY;
+
+  // Prefer a value that actually looks like a Resend key (starts with "re_").
+  if (encoded && encoded.trim()) {
+    const decoded = Buffer.from(encoded.trim(), "base64").toString("utf8").trim();
+    if (looksLikeKey(decoded)) return decoded;
+  }
+  if (looksLikeKey(plain)) return plain.trim();
+
+  // Last resort: return any non-empty value we have, in case the prefix
+  // check is ever too strict.
+  if (encoded && encoded.trim()) {
+    return Buffer.from(encoded.trim(), "base64").toString("utf8").trim();
+  }
+  if (plain && plain.trim()) return plain.trim();
+
+  throw new Error(
+    "No Resend API key found. Set EMAIL_SERVICE_TOKEN (base64-encoded) or " +
+      "RESEND_API_KEY (plain) for the Production environment in Vercel."
+  );
+}
 
 function formatCount(n) {
   if (n === null || n === undefined) return "N/A";
@@ -106,7 +142,7 @@ function buildEmailHTML(date, results, previousResults) {
 
 async function sendReport(date, results, previousResults) {
   const html = buildEmailHTML(date, results, previousResults);
-  const RESEND_KEY = Buffer.from(process.env.EMAIL_SERVICE_TOKEN, "base64").toString("utf8");
+  const RESEND_KEY = getResendKey();
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
